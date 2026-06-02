@@ -1,4 +1,4 @@
-name: Build ArtisanKRNL
+name: Build Adr3nalineKRNL
 
 on:
   workflow_dispatch:
