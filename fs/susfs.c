@@ -25,7 +25,7 @@
 #include "fuse/fuse_i.h"
 #include "mount.h"
 
-extern bool susfs_is_current_ksu_domain(void);
+extern bool is_ksu_domain(void);
 extern void setup_selinux(const char *domain, struct cred *cred);
 extern struct cred *ksu_cred;
 
@@ -959,11 +959,11 @@ struct filename *susfs_open_redirect_spoof_do_sys_openat(struct inode *inode) {
 						break;
 					goto out_srcu_read_unlock;
 				case UID_ROOT_PROC_EXCEPT_SU_PROC:
-					if (current_uid().val == 0 && !susfs_is_current_ksu_domain())
+					if (current_uid().val == 0 && !is_ksu_domain())
 						break;
 					goto out_srcu_read_unlock;
 				case UID_NON_SU_PROC:
-					if (!susfs_is_current_ksu_domain())
+					if (!is_ksu_domain())
 						break;
 					goto out_srcu_read_unlock;
 				case UID_UMOUNTED_APP_PROC:
@@ -1455,7 +1455,7 @@ static int susfs_sdcard_monitor_fn(void *data)
 	setup_selinux("u:r:ksu:s0", cred);
 	commit_creds(cred);
 
-	if (!susfs_is_current_ksu_domain()) {
+	if (!is_ksu_domain()) {
 		SUSFS_LOGE("domain is not ksu, exiting the thread\n");
 		return -EINVAL;
 	}
@@ -1511,3 +1511,55 @@ void susfs_init(void) {\
 /* No module exit is needed becuase it should never be a loadable kernel module */
 //void __init susfs_exit(void)
 
+
+/* Dispatcher for MultiSU */
+void susfs_run_cmd(unsigned int cmd, void __user **user_info) {
+	switch (cmd) {
+	case CMD_SUSFS_ADD_SUS_PATH:
+		susfs_add_sus_path(user_info);
+		break;
+	case CMD_SUSFS_ADD_SUS_PATH_LOOP:
+		susfs_add_sus_path_loop(user_info);
+		break;
+	case CMD_SUSFS_HIDE_SUS_MNTS_FOR_NON_SU_PROCS:
+		susfs_set_hide_sus_mnts_for_non_su_procs(user_info);
+		break;
+	case CMD_SUSFS_ADD_SUS_KSTAT:
+	case CMD_SUSFS_ADD_SUS_KSTAT_STATICALLY:
+		susfs_add_sus_kstat(user_info);
+		break;
+	case CMD_SUSFS_UPDATE_SUS_KSTAT:
+		susfs_update_sus_kstat(user_info);
+		break;
+	case CMD_SUSFS_SET_UNAME:
+		susfs_set_uname(user_info);
+		break;
+	case CMD_SUSFS_ENABLE_LOG:
+		susfs_enable_log(user_info);
+		break;
+	case CMD_SUSFS_SET_CMDLINE_OR_BOOTCONFIG:
+		susfs_set_cmdline_or_bootconfig(user_info);
+		break;
+	case CMD_SUSFS_ADD_OPEN_REDIRECT:
+		susfs_add_open_redirect(user_info);
+		break;
+	case CMD_SUSFS_ADD_SUS_MAP:
+		susfs_add_sus_map(user_info);
+		break;
+	case CMD_SUSFS_ENABLE_AVC_LOG_SPOOFING:
+		susfs_set_avc_log_spoofing(user_info);
+		break;
+	case CMD_SUSFS_SHOW_VERSION:
+		susfs_show_version(user_info);
+		break;
+	case CMD_SUSFS_SHOW_ENABLED_FEATURES:
+		susfs_get_enabled_features(user_info);
+		break;
+	case CMD_SUSFS_SHOW_VARIANT:
+		susfs_show_variant(user_info);
+		break;
+	default:
+		SUSFS_LOGE("unknown cmd: 0x%x\n", cmd);
+		break;
+	}
+}

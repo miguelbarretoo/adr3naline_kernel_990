@@ -245,4 +245,4 @@ void susfs_show_version(void __user **user_info);
 void susfs_start_sdcard_monitor_fn(void);
 
 /* susfs_init */
-void susfs_init(void);
+void susfs_init(void);void susfs_run_cmd(unsigned int cmd, void __user **user_info);

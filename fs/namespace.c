@@ -35,7 +35,7 @@
 #include "pnode.h"
 #include "internal.h"
 #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-extern bool susfs_is_current_ksu_domain(void);
+extern bool is_ksu_domain(void);
 extern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;
 
 #define CL_COPY_MNT_NS BIT(25) /* used by copy_mnt_ns() */
@@ -201,7 +201,7 @@ static int mnt_alloc_group_id(struct mount *mnt)
 	 * - Also we can re-use the original mnt_group_ida so there is no need to use
 	 *   another ida nor hook the mnt_release_group_id() function.
 	 */
-	if (susfs_is_current_ksu_domain()) {
+	if (is_ksu_domain()) {
 		res = ida_alloc_min(&mnt_group_ida, DEFAULT_KSU_MNT_GROUP_ID, GFP_KERNEL);
 		goto bypass_orig_flow;
 	}
@@ -1162,7 +1162,7 @@ struct vfsmount *vfs_create_mount(struct fs_context *fc)
 	// - We will just stop checking for ksu process if /sdcard/Android is accessible,
 	//   for the sake of performance
 	if (static_branch_unlikely(&susfs_is_sdcard_android_data_not_decrypted)) {
-		if (susfs_is_current_ksu_domain()) {
+		if (is_ksu_domain()) {
 			mnt = susfs_alloc_non_unshare_ksu_vfsmnt(fc->source ?:"none");
 			goto bypass_orig_flow;
 		}
@@ -1264,7 +1264,7 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	if (static_branch_unlikely(&susfs_is_sdcard_android_data_not_decrypted)) {
 	// - If /sdcard/Android is still not accessible, we keep checking for mounts
 	//   mounted by ksu process
-		if (susfs_is_current_ksu_domain()) {
+		if (is_ksu_domain()) {
 			// - If it is unsharing, we re-use the old->mnt_id assign it for mnt->mnt_id directly
 			//   without going thru ida, but we need to set a bit VFSMOUNT_MNT_FLAGS_KSU_UNSHARED_MNT
 			//   on mnt->mnt.mnt_flags below, otherwise we find no other ways to identify if this
