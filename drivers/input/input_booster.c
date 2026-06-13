@@ -134,7 +134,7 @@ void trigger_input_booster(struct work_struct* work)
 			if (!delayed_work_pending(&(ib->ib_timeout_work[IB_TAIL]))) {
 				queue_delayed_work(ib_unbound_highwq,
 					&(ib->ib_timeout_work[IB_TAIL]),
-					msecs_to_jiffies(ib->ib_dt->tail_time));
+					msecs_to_jiffies(ib->ib_dt->tail_time / 2));
 			} else {
 				pr_err(ITAG" IB Trigger Release :: tail timeout start");
 			}
@@ -255,7 +255,8 @@ void press_state_func(struct work_struct* work)
 			continue;
 		}
 
-		tv->value = res.head_value;
+		// Cap the head boost frequency to prevent power spikes
+		tv->value = (res.head_value > 1500) ? 1500 : res.head_value;
 		pr_booster("Press State Func :::: Uniq(%d)'s Update Res(%d) Head Val(%d)",
 			tv->uniq_id, res.res_id, res.head_value);
 
@@ -359,7 +360,8 @@ void release_state_func(struct work_struct* work)
 			continue;
 
 		spin_lock(&write_qos_lock);
-		tv->value = res.tail_value;
+		// Cap the tail boost frequency to prevent sustained power drain
+		tv->value = (res.tail_value > 1200) ? 1200 : res.tail_value;
 		spin_unlock(&write_qos_lock);
 
 		qos_values[res.res_id] = get_qos_value(res.res_id);
